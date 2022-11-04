@@ -462,6 +462,7 @@ typedef struct             // Valve Object
 
 typedef struct             // Control Statement
 {
+    int    isEnabled;      // set to enable or disable this control
     int         Link;      // link index
     int         Node;      // control node index
     long        Time;      // control time
@@ -520,6 +521,7 @@ typedef struct                 // Control Rule Structure
 {
     char     label[MAXID+1];   // rule label
     double   priority;         // priority level
+    int      isEnabled;        // enabled or disabled
     Spremise *Premises;        // list of premises
     Saction  *ThenActions;     // list of THEN actions
     Saction  *ElseActions;     // list of ELSE actions
@@ -633,6 +635,9 @@ typedef struct {
     DateStamp[26];         // Current date & time
 
   SField   Field[MAXVAR];  // Output reporting fields
+
+  void (*reportCallback)(void *userData, EN_Project, char*);
+  void *reportCallbackUserData;
 
 } Report;
 
