@@ -841,6 +841,19 @@ int DLLEXPORT EN_closeQ(EN_Project p)
 
  ********************************************************************/
 
+int  DLLEXPORT EN_setReportCallback(EN_Project p, void (*callback)(void*,EN_Project,char*))
+{
+  p->report.reportCallback = callback;
+  //  m->reportCallbackUserData = userData;
+  return EN_OK;
+}
+
+int DLLEXPORT EN_setReportCallbackUserData(EN_Project p, void *userData)
+{
+  p->report.reportCallbackUserData = userData;
+  return EN_OK;
+}
+
 int DLLEXPORT EN_writeline(EN_Project p, char *line)
 /*----------------------------------------------------------------
 **  Input:   line = line of text
@@ -1610,6 +1623,39 @@ int DLLEXPORT EN_settimeparam(EN_Project p, int param, long value)
     return 0;
 }
 
+/// get the time to next event, and give a reason for the time step truncation
+int  DLLEXPORT EN_timeToNextEvent(EN_Project p, EN_TimestepEvent *eventType, long *duration, int *elementIndex)
+{
+  Times  *time = &p->times;
+  long hydStep, tankStep, controlStep;
+
+  hydStep = time->Hstep;
+  tankStep = hydStep;
+  controlStep = hydStep;
+
+  int iTank = tanktimestep(p, &tankStep);
+  int iControl = controltimestep(p, &controlStep);
+
+  // return the lesser of the three step lengths
+  if (controlStep < tankStep) {
+    *eventType = EN_STEP_CONTROLEVENT;
+    *duration = controlStep;
+    *elementIndex = iControl;
+  }
+  else if (tankStep < hydStep) {
+    *eventType = EN_STEP_TANKEVENT;
+    *duration = tankStep;
+    *elementIndex = iTank;
+  }
+  else {
+    *eventType = EN_STEP_HYD;
+    *duration = hydStep;
+    *elementIndex = 0;
+  }
+
+  return EN_OK;
+}
+
 int DLLEXPORT EN_getqualinfo(EN_Project p, int *qualType, char *chemName,
                              char *chemUnits, int *traceNode)
 /*----------------------------------------------------------------
@@ -1774,9 +1820,9 @@ int DLLEXPORT EN_addnode(EN_Project p, char *id, int nodeType, int *index)
 
     // Check if a node with same id already exists
     if (EN_getnodeindex(p, id, &i) == 0) return 215;
-    
+
     // Check for valid node type
-    if (nodeType < EN_JUNCTION || nodeType > EN_TANK) return 251; 
+    if (nodeType < EN_JUNCTION || nodeType > EN_TANK) return 251;
 
     // Grow node-related arrays to accomodate the new node
     size = (net->Nnodes + 2) * sizeof(Snode);
@@ -1797,7 +1843,7 @@ int DLLEXPORT EN_addnode(EN_Project p, char *id, int nodeType, int *index)
             hashtable_update(net->NodeHashTable, net->Node[i].ID, i + 1);
             net->Node[i + 1] = net->Node[i];
         }
-    
+
         // set index of new Junction node
         net->Njuncs++;
         nIdx = net->Njuncs;
@@ -2254,20 +2300,20 @@ int DLLEXPORT EN_getnodevalue(EN_Project p, int index, int property, double *val
         if (Node[index].Type != TANK) return 0;
         v = Tank[index - nJuncs].CanOverflow;
         break;
-        
+
     case EN_DEMANDDEFICIT:
         if (index > nJuncs) return 0;
         // After an analysis, DemandFlow contains node's required demand
         // while NodeDemand contains delivered demand + emitter flow
         if (hyd->DemandFlow[index] < 0.0) return 0;
-        v = (hyd->DemandFlow[index] - 
+        v = (hyd->DemandFlow[index] -
             (hyd->NodeDemand[index] - hyd->EmitterFlow[index])) * Ucf[FLOW];
         break;
-        
+
     case EN_NODE_INCONTROL:
         v = (double)incontrols(p, NODE, index);
         break;
-        
+
     default:
         return 251;
     }
@@ -2483,7 +2529,7 @@ int DLLEXPORT EN_setnodevalue(EN_Project p, int index, int property, double valu
         Tank[j].Vmin = tankvolume(p, j, Tank[j].Hmin); // new min. volume
         Tank[j].V0 = tankvolume(p, j, Tank[j].H0);     // new init. volume
         Tank[j].Vmax = tankvolume(p, j, Tank[j].Hmax); // new max. volume
-        Tank[j].A = (curve->Y[n] - curve->Y[0]) /      // nominal area 
+        Tank[j].A = (curve->Y[n] - curve->Y[0]) /      // nominal area
             (curve->X[n] - curve->X[0]);
         break;
 
@@ -3812,7 +3858,7 @@ int DLLEXPORT EN_getlinkvalue(EN_Project p, int index, int property, double *val
     case EN_LINK_INCONTROL:
         v = (double)incontrols(p, LINK, index);
         break;
-        
+
     default:
         return 251;
     }
@@ -4095,20 +4141,20 @@ int DLLEXPORT EN_getvertexcount(EN_Project p, int index, int *count)
 */
 {
     Network *net = &p->network;
-    
+
     Slink *Link = net->Link;
     Pvertices vertices;
-    
+
     // Check that link exists
     *count = 0;
     if (!p->Openflag) return 102;
     if (index <= 0 || index > net->Nlinks) return 204;
-    
+
     // Set count to number of vertices
     vertices = Link[index].Vertices;
     if (vertices) *count = vertices->Npts;
     return 0;
-}    
+}
 
 int DLLEXPORT EN_getvertex(EN_Project p, int index, int vertex, double *x, double *y)
 /*----------------------------------------------------------------
@@ -4122,22 +4168,22 @@ int DLLEXPORT EN_getvertex(EN_Project p, int index, int vertex, double *x, doubl
 */
 {
     Network *net = &p->network;
-    
+
     Slink *Link = net->Link;
     Pvertices vertices;
-    
+
     // Check that link exists
     *x = MISSING;
     *y = MISSING;
     if (!p->Openflag) return 102;
     if (index <= 0 || index > net->Nlinks) return 204;
-    
+
     // Check that vertex exists
     vertices = Link[index].Vertices;
     if (vertices == NULL) return 255;
     if (vertex <= 0 || vertex > vertices->Npts) return 255;
     *x = vertices->X[vertex - 1];
-    *y = vertices->Y[vertex - 1];    
+    *y = vertices->Y[vertex - 1];
     return 0;
 }
 
@@ -4153,23 +4199,23 @@ int DLLEXPORT EN_setvertex(EN_Project p, int index, int vertex, double x, double
 */
 {
     Network *net = &p->network;
-    
+
     Slink *Link = net->Link;
     Pvertices vertices;
-    
+
     // Check that link exists
     if (!p->Openflag) return 102;
     if (index <= 0 || index > net->Nlinks) return 204;
-    
+
     // Check that vertex exists
     vertices = Link[index].Vertices;
     if (vertices == NULL) return 255;
     if (vertex <= 0 || vertex > vertices->Npts) return 255;
     vertices->X[vertex - 1] = x;
-    vertices->Y[vertex - 1] = y;    
+    vertices->Y[vertex - 1] = y;
     return 0;
 }
-    
+
 int DLLEXPORT EN_setvertices(EN_Project p, int index, double *x, double *y, int count)
 /*----------------------------------------------------------------
 **  Input:   index = link index
@@ -4182,11 +4228,11 @@ int DLLEXPORT EN_setvertices(EN_Project p, int index, double *x, double *y, int 
 */
 {
     Network *net = &p->network;
-    
+
     Slink *link;
     int i;
     int err = 0;
-    
+
     // Check that link exists
     if (!p->Openflag) return 102;
     if (index <= 0 || index > net->Nlinks) return 204;
@@ -4194,7 +4240,7 @@ int DLLEXPORT EN_setvertices(EN_Project p, int index, double *x, double *y, int 
 
     // Delete existing set of vertices
     freelinkvertices(link);
-    
+
     // Add each new vertex to the link
     for (i = 0; i < count; i++)
     {
@@ -4203,7 +4249,7 @@ int DLLEXPORT EN_setvertices(EN_Project p, int index, double *x, double *y, int 
     }
     if (err) freelinkvertices(link);
     return err;
-}    
+}
 
 /********************************************************************
 
@@ -4287,16 +4333,16 @@ int DLLEXPORT EN_setheadcurveindex(EN_Project p, int linkIndex, int curveIndex)
     pump = &p->network.Pump[pumpIndex];
     oldCurveIndex = pump->Hcurve;
     newCurveType = p->network.Curve[curveIndex].Type;
-    
+
     // Assign the new curve to the pump
     pump->Ptype = NOCURVE;
     pump->Hcurve = curveIndex;
     if (curveIndex == 0) return 0;
-    
+
     // Update the pump's head curve parameters (which also changes
     // the new curve's Type to PUMP_CURVE)
     err = updatepumpparams(p, pumpIndex);
-    
+
     // If the parameter updating failed (new curve was not a valid pump curve)
     // restore the pump's original curve and its parameters
     if (err > 0)
@@ -4306,8 +4352,8 @@ int DLLEXPORT EN_setheadcurveindex(EN_Project p, int linkIndex, int curveIndex)
         pump->Hcurve = oldCurveIndex;
         if (oldCurveIndex == 0) return err;
         updatepumpparams(p, pumpIndex);
-    }    
-    
+    }
+
     // Convert the units of the updated pump parameters to feet and cfs
     if (pump->Ptype == POWER_FUNC)
     {
@@ -4796,7 +4842,7 @@ int DLLEXPORT EN_setcurvetype(EN_Project p, int index, int type)
     Network *net = &p->network;
     if (!p->Openflag) return 102;
     if (index < 1 || index > net->Ncurves) return 206;
-    if (type < 0 || type > EN_GENERIC_CURVE) return 251;  
+    if (type < 0 || type > EN_GENERIC_CURVE) return 251;
     net->Curve[index].Type = type;
     return 0;
 }
@@ -4870,7 +4916,7 @@ int DLLEXPORT EN_setcurvevalue(EN_Project p, int curveIndex, int pointIndex,
     // Insert new point into curve
     curve->X[n] = x;
     curve->Y[n] = y;
-    
+
     // Adjust parameters for pumps using curve as a head curve
     return adjustpumpparams(p, curveIndex);
 }
@@ -4944,7 +4990,7 @@ int DLLEXPORT EN_setcurve(EN_Project p, int index, double *xValues,
         curve->X[j] = xValues[j];
         curve->Y[j] = yValues[j];
     }
-    
+
     // Adjust parameters for pumps using curve as a head curve
     return adjustpumpparams(p, index);
 }
@@ -5256,6 +5302,45 @@ int DLLEXPORT EN_setcontrol(EN_Project p, int index, int type, int linkIndex,
     return 0;
 }
 
+int DLLEXPORT EN_controlEnabled(EN_Project ph, int controlIndex)
+/*----------------------------------------------------------------
+**  Input:   index  = index of the control
+**  Output:  none
+**  Returns: EN_DISABLE or EN_ENABLE
+**  Purpose: Test for whether a control is enabled
+**----------------------------------------------------------------
+*/
+{
+  if (controlIndex < 1 || controlIndex > ph->network.Ncontrols) {
+    return EN_DISABLE; // of course it's not enabled. it's not even a control.
+  }
+
+  return ph->network.Control[controlIndex].isEnabled;
+}
+
+int DLLEXPORT EN_setControlEnabled(EN_Project ph, int controlIndex, int enable)
+/*----------------------------------------------------------------
+**  Input:   index  = index of the control
+**           enalbe = enable status
+**  Output:  none
+**  Returns: error code
+**  Purpose: Sets the enable value of a simple control
+**----------------------------------------------------------------
+*/
+{
+  if (enable != EN_DISABLE && enable != EN_ENABLE) {
+    return EN_ERR_ILLEGAL_NUMERIC_VALUE;
+  }
+
+  if (controlIndex < 1 || controlIndex > ph->network.Ncontrols) {
+    return EN_ERR_UNDEF_CONTROL; // return error. it's not even a control.
+  }
+
+  ph->network.Control[controlIndex].isEnabled = enable;
+
+  return EN_OK;
+}
+
 /********************************************************************
 
     Rule-Based Controls Functions
@@ -5398,6 +5483,29 @@ int DLLEXPORT EN_getruleID(EN_Project p, int index, char *id)
     if (index < 1 || index > p->network.Nrules) return 257;
     strcpy(id, p->network.Rule[index].label);
     return 0;
+}
+
+int DLLEXPORT EN_setRuleEnabled(EN_Project p, int index, int enable)
+/*----------------------------------------------------------------
+**  Input:   index = rule index
+             enable = Either EN_ENABLE or EN_DISABLE
+**  Output:  none
+**  Returns: error code
+**  Purpose: Set a Rule to enabled or disable
+**----------------------------------------------------------------
+*/
+{
+  if (enable != EN_DISABLE && enable != EN_ENABLE) {
+    return EN_ERR_ILLEGAL_NUMERIC_VALUE;
+  }
+
+  if (index < 1 || index > p->network.Nrules) {
+    return EN_ERR_UNDEF_CONTROL; // return error. it's not even a control.
+  }
+
+  p->network.Rule[index].isEnabled = enable;
+
+  return EN_OK;
 }
 
 int DLLEXPORT EN_getpremise(EN_Project p, int ruleIndex, int premiseIndex,

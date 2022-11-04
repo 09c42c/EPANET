@@ -517,6 +517,10 @@ typedef struct Project *EN_Project;
 
   ********************************************************************/
 
+  int  DLLEXPORT EN_setReportCallback(EN_Project ph, void (*callback)(void *userData, EN_Project,char*)); /**< set a callback function for logging. by default EN_writeline */
+
+  int  DLLEXPORT EN_setReportCallbackUserData(EN_Project ph, void *userData);
+
   /**
   @brief Writes a line of text to a project's report file.
   @param ph an EPANET project handle.
@@ -638,6 +642,7 @@ typedef struct Project *EN_Project;
   */
   int  DLLEXPORT EN_getstatistic(EN_Project ph, int type, double* out_value);
 
+  int  DLLEXPORT EN_timeToNextEvent(EN_Project ph, EN_TimestepEvent *eventType, long *duration, int *elementIndex);
   /**
   @brief Retrieves the order in which a node or link appears in an @ref OutFile "output file".
   @param ph an EPANET project handle.
@@ -1615,6 +1620,25 @@ typedef struct Project *EN_Project;
   int  DLLEXPORT EN_setcontrol(EN_Project ph, int index, int type, int linkIndex,
                  double setting, int nodeIndex, double level);
 
+  /**
+  @brief Test for whether a control is enabled
+  @param ph an EPANET project handle.
+  @param controlIndex The index of the control in question
+  @return EN_DISABLE if the control is disabled or could not be found, EN_ENABLE
+  if the control is enabled.
+  */
+  int  DLLEXPORT EN_controlEnabled(EN_Project ph, int controlIndex);
+
+   /**
+   @brief Sets the properties of an existing simple control.
+   @param ph an EPANET project handle.
+   @param index the control's index (starting from 1).
+   @param enable the value of enabled status
+   (0 for \b EN_DISABLE and 1 \b EN_ENABLE).
+   @return an error code.
+   */
+  int  DLLEXPORT EN_setControlEnabled(EN_Project ph, int controlIndex, int enable);
+
 
   /********************************************************************
 
@@ -1664,6 +1688,15 @@ typedef struct Project *EN_Project;
   The ID name must be sized to hold at least @ref EN_SizeLimits "EN_MAXID" characters.
   */
   int  DLLEXPORT EN_getruleID(EN_Project ph, int index, char *out_id);
+
+  /**
+  @brief Disables or enables a rule-based control given its index.
+  @param ph an EPANET project handle.
+  @param index the rule's index (starting from 1).
+  @param enable enabled or disabled.
+  @return Error code.
+  */
+  int  DLLEXPORT EN_setRuleEnabled(EN_Project ph, int index, int enable);
 
   /**
   @brief Gets the properties of a premise in a rule-based control.
