@@ -25,7 +25,7 @@
 #   CMake is available at https://cmake.org/download/
 #
 
-cmake_minimum_required (VERSION 2.8.8)
+cmake_minimum_required (VERSION 3.10)
 
 project(EPANET)
 
@@ -100,3 +100,7 @@ ELSE(TRUE)
 ENDIF(MSVC AND "${CMAKE_VS_PLATFORM_NAME}" MATCHES "(Win32)")
 
 target_include_directories(epanet2 PUBLIC ${PROJECT_SOURCE_DIR}/include)
+
+install(TARGETS epanet2 runepanet epanet-output
+RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})

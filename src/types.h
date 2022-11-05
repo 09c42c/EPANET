@@ -18,6 +18,8 @@
 
 #include "hash.h"
 
+#include "epanet2_2.h"
+
 /*
 -------------------------------------------
    Definition of 4-byte integers & reals
