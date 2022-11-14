@@ -34,7 +34,7 @@ set(EPANET_OUT_SOURCES  src/epanet_output.c
 
 # the binary output file API
 add_library(epanet-output SHARED ${EPANET_OUT_SOURCES})
-target_include_directories(epanet-output PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+target_include_directories(epanet-output PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
                                                 ${CMAKE_CURRENT_SOURCE_DIR}/../)
 
 include(GenerateExportHeader)

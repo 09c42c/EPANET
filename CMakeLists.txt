@@ -99,8 +99,17 @@ ELSE(TRUE)
   add_library(epanet2 SHARED ${EPANET_LIB_ALL})
 ENDIF(MSVC AND "${CMAKE_VS_PLATFORM_NAME}" MATCHES "(Win32)")
 
-target_include_directories(epanet2 PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(epanet2 PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(runepanet PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
 install(TARGETS epanet2 runepanet epanet-output
+EXPORT epanet2Targets
 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+include(GNUInstallDirs)
+
+install(EXPORT epanet2Targets
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/epanet2
+  FILE epanet2Config.cmake
+)
