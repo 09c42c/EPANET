@@ -25,7 +25,7 @@
 #   CMake is available at https://cmake.org/download/
 #
 
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.15)
 
 project(EPANET)
 
@@ -99,8 +99,59 @@ ELSE(TRUE)
   add_library(epanet2 SHARED ${EPANET_LIB_ALL})
 ENDIF(MSVC AND "${CMAKE_VS_PLATFORM_NAME}" MATCHES "(Win32)")
 
-target_include_directories(epanet2 PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(epanet2 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(runepanet PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(epanet-output PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(epanet2
+  INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<INSTALL_INTERFACE:include>
+)
 
-install(TARGETS epanet2 runepanet epanet-output
-RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+target_include_directories(runepanet
+  INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<INSTALL_INTERFACE:bin>
+)
+
+target_include_directories(epanet-output
+  INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<INSTALL_INTERFACE:include>
+ )
+
+install(TARGETS epanet2 runepanet # epanet-output
+  EXPORT epanet2Targets
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(EXPORT epanet2Targets
+  FILE epanet2Targets.cmake
+  DESTINATION "lib/cmake/epanet2"
+)
+
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.make.in
+  "${CMAKE_CURRENT_BINARY_DIR}/epanet2Config.cmake"
+  INSTALL_DESTINATION "lib/cmake"
+  NO_SET_AND_CHECK_MACRO
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+)
+
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/epanet2ConfigVersion.cmake"
+  VERSION "2.2"
+  COMPATIBILITY AnyNewerVersion
+)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/epanet2Config.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/epanet2ConfigVersion.cmake
+  DESTINATION "lib/cmake/epanet2"
+)
+
+export(EXPORT epanet2Targets
+  FILE "${CMAKE_CURRENT_BINARY_DIR}/epanet2Targets.cmake"
+)
