@@ -25,9 +25,12 @@
 #   CMake is available at https://cmake.org/download/
 #
 
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.10 REQUIRED)
 
-project(EPANET)
+project(EPANET
+  VERSION 2.2
+  LANGUAGES C CXX
+)
 
 # Append local dir to module search path
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -99,13 +102,26 @@ ELSE(TRUE)
   add_library(epanet2 SHARED ${EPANET_LIB_ALL})
 ENDIF(MSVC AND "${CMAKE_VS_PLATFORM_NAME}" MATCHES "(Win32)")
 
+message("CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
+message("CMAKE_CURRENT_LIST_DIR = ${CMAKE_CURRENT_LIST_DIR}")
+message("PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
+
+target_include_directories(epanet2
+  INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDE_DIR}>
+)
+
 target_include_directories(epanet2 PRIVATE ${PROJECT_SOURCE_DIR}/include)
-target_include_directories(runepanet PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
 install(TARGETS epanet2 runepanet epanet-output
 EXPORT epanet2Targets
 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
+    DESTINATION include)
 
 include(GNUInstallDirs)
 
