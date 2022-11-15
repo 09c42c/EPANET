@@ -116,14 +116,16 @@ RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
-    DESTINATION include)
+install(
+  DIRECTORY ${PROJECT_SOURCE_DIR}/include/
+  DESTINATION include/epanet2
+  PATTERN "*.h"
+)
 
-install(FILES
-  ${PROJECT_SOURCE_DIR}/src/types.h
-  ${PROJECT_SOURCE_DIR}/src/hash.h
-DESTINATION
-  include
+install(
+  FILES ${PROJECT_SOURCE_DIR}/src/types.h
+        ${PROJECT_SOURCE_DIR}/src/hash.h
+  DESTINATION include/epanet2
 )
 
 include(GNUInstallDirs)
