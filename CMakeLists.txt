@@ -102,10 +102,6 @@ ELSE(TRUE)
   add_library(epanet2 SHARED ${EPANET_LIB_ALL})
 ENDIF(MSVC AND "${CMAKE_VS_PLATFORM_NAME}" MATCHES "(Win32)")
 
-message("CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
-message("CMAKE_CURRENT_LIST_DIR = ${CMAKE_CURRENT_LIST_DIR}")
-message("PROJECT_SOURCE_DIR = ${PROJECT_SOURCE_DIR}")
-
 target_include_directories(epanet2
   INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -123,8 +119,14 @@ LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
     DESTINATION include)
 
-include(GNUInstallDirs)
+install(FILES
+  ${PROJECT_SOURCE_DIR}/src/types.h
+  ${PROJECT_SOURCE_DIR}/src/hash.h
+DESTINATION
+  include
+)
 
+include(GNUInstallDirs)
 install(EXPORT epanet2Targets
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/epanet2
   FILE epanet2Config.cmake
